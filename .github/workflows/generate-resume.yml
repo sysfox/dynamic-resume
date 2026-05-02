@@ -1,0 +1,55 @@
+name: Generate GitHub Resume
+
+on:
+  # 每周一 UTC 00:00 定时触发
+  schedule:
+    - cron: '0 0 * * 1'
+  # 支持手动触发（在 Actions 页面点击 Run workflow）
+  workflow_dispatch:
+    inputs:
+      auto_open:
+        description: '是否自动打开浏览器（本地运行时有效）'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write   # 允许写入 gh-pages 分支
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 拉取代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. 设置 Python 环境
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 3. 安装依赖
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 4. 运行脚本，生成 resume.html
+      - name: Generate resume
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUTO_OPEN: 'false'
+        run: python generate_resume.py
+
+      # 5. 将 resume.html 部署到 gh-pages 分支
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .          # 发布当前目录
+          publish_branch: gh-pages
+          # 只发布 resume.html，不推送其他源码文件
+          include_files: resume.html
+          commit_message: '🤖 Auto-update resume [skip ci]'
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
